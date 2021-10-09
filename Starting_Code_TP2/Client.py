@@ -21,11 +21,11 @@ class Client(Agent):
         message.set_sender(AID('client'))
         message.add_receiver(AID('agence'))
         message.set_ontology("cmdClient")
-        RESERVATION = {"personne": 1, "nuit": 1, "ville": 'Paris', "etoiles": 3} 
+        RESERVATION = {"personne": 2, "nuit": 3, "ville": 'Mons', "etoiles": 3, 'prix' : 220} 
         RESERVATION_encp = pickle.dumps(RESERVATION)
         message.set_content(RESERVATION_encp)
         self.send(message)
-        print('client sending message')
+        print('>>> Demande du client envoyée')
         
     def react(self, message):
         onto="decision"
@@ -35,5 +35,7 @@ class Client(Agent):
 
         if message.ontology  == onto:
             proposition = pickle.loads(message.content)
-            print(" l'hotel qu'on me propose est le"+ proposition["nameHotel"]+ "le prix est de " + str(proposition["prixHotel"]))
+            #print(" l'hotel qu'on me propose est de : "+ proposition["nameHotel"]+ " le prix par personne est de : " + str(proposition["prixHotel"]))
+            for key, val in proposition.items():
+                print(key, val+'%')
 

@@ -9,13 +9,12 @@ import pickle
 
 class Hotel_3(Agent):
     #definir les paramètre de l'hotel N° 1 : 
-    nbrMaxPersAccepte = 3 #parametre qui definie le nombre de maximum de personnes accepté par chambre
-    prix = 120.99 # prix par personne
-    ville ="Bruges"
-    stock =4 # chambre disponibles
-    nbrEtoiles=3 # nombre d'etoiles proposées
-    reduction =35 # en cas de demande de 3 nuits ou plus, un pourcentage de réduction peut être appliqué au niveau de l'agence
-    '''Completez ici ...'''
+    nbrMaxPersAccepte = 2 #parametre qui definie le nombre de maximum de personnes accepté par chambre
+    prix = 80 # prix par personne
+    ville ="Mons"
+    stock = 4 # chambre disponibles
+    nbrEtoiles = 3 # nombre d'etoiles proposées
+    reduction = 35 # en cas de demande de 3 nuits ou plus, un pourcentage de réduction peut être appliqué au niveau de l'agence
 
     def __init__(self, aid):
         super(Hotel_3, self).__init__(aid=aid, debug=False)
@@ -42,9 +41,9 @@ class Hotel_3(Agent):
             self.send(Offre)
 
         if message.performative==perReject:
-            print("Hotel_3 : Tentative de reservation refusée par l'agence - peut être une autre fois\n")
+            print("Hotel_3 : Tentative de reservation refusée par l'agence")
 
         if message.performative==perAccept:
-            print("Hotel_3 : Reservation confirmé - contact avec le client établie")
+            print("Hotel_3 : Reservation confirmée")
             Hotel_3.stock-=1
-            print("Le nombre de disponibilité restantes est de : ", Hotel_3.stock)
+            #print("Le nombre de disponibilité restantes est de : ", Hotel_3.stock)

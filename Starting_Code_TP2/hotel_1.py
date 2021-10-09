@@ -9,12 +9,13 @@ import pickle
 
 class Hotel_1(Agent):
     #definir les paramètre de l'hotel N° 1 : 
-    nbrMaxPersAccepte = 3 #parametre qui definie le nombre de maximum de personnes accepté par chambre
-    prix = 96.98 # prix par personne
-    ville ="Paris"
-    stock =50 # chambre disponibles
-    nbrEtoiles=4 # nombre d'etoiles proposées
-    reduction =25 # en cas de demande de 3 nuits ou plus, un pourcentage de réduction peut être appliqué au niveau de l'agence
+    nbrMaxPersAccepte = 2 #parametre qui definie le nombre de maximum de personnes accepté par chambre
+    prix = 60 # prix par personne
+    ville = "Charleroi"
+    stock = 50 # chambre disponibles
+    nbrEtoiles = 3 # nombre d'etoiles proposées
+    reduction = 20 # en cas de demande de 3 nuits ou plus, un pourcentage de réduction peut être appliqué au niveau de l'agence
+    
     def __init__(self, aid):
         super(Hotel_1, self).__init__(aid=aid, debug=False)
     def on_start(self):
@@ -22,7 +23,6 @@ class Hotel_1(Agent):
         display_message(self.aid.localname, "Demarrage de l'agent Hotel_1 - reception des demandes en cours ...")
 
     def react(self, message):
-
         super(Hotel_1, self).react(message)
         perCFP="cfp"
         ontoCFP="contactHot1"
@@ -41,9 +41,9 @@ class Hotel_1(Agent):
             self.send(Offre)
             
         if message.performative==perReject:
-            print("Hotel_1 : Tentative de reservation refusée par l'agence - peut être une autre fois\n")
+            print("Hotel_1 : Tentative de reservation refusée par l'agence")
 
         if message.performative==perAccept:
-            print("Hotel_1 : Reservation confirmé - contact avec le client établie")
+            print("Hotel_1 : Reservation confirmée")
             Hotel_1.stock-=1
-            print("Le nombre de disponibilité restantes est de : ", Hotel_1.stock)
+            #print("Le nombre de disponibilité restantes est de : ", Hotel_1.stock)

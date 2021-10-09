@@ -7,26 +7,34 @@ from sys import argv
 from pade.acl.filters import Filter
 import pickle
 
+from collections import Counter
+
 class Agence(Agent):
-
+    #message reçu du client
     clientMessage = {}
-
     nbrPers = 0 #variable qui va prendre le nombre de personnes demandé par le client
-    QuntD =0 #variable qui va prendre le nombre de nuits souhaitées par le client
-    ville ="" #variable qui va prendre le nom de la ville souhaité par le client
-    etoiles =0 #variable qui va prendre le nombre d'étoile de l'hotel souhaité par le client
+    QuntD = 0 #variable qui va prendre le nombre de nuits souhaitées par le client
+    ville = "" #variable qui va prendre le nom de la ville souhaité par le client
+    etoiles = 0 #variable qui va prendre le nombre d'étoile de l'hotel souhaité par le client
+    prix = 0 
+    
+    
     decFinal=0 #variable qui va verifier si la demande du client correspond à l'un des meilleures offres de marchée
     nbrpro =0 #variable qui va compter le nombre d'article similaire (avec prix different)
     PrixFinal=0 # le toral du prix selon la quantité demandé, une réduction de 30% est appliqué sur le total, si quantité est > =3
     IdBestHotel=""
     contactTermine=0
-    LesHotels= []
+
+    #contient les messages de reponses des hotels
+    LesHotels = []
 
     countHotel = 0
     dictHotels = {}
 
-    listPrix = [] #cette liste va sotocker les prix totaux de chaque demande correspondant à la demande du client pour selectionner le prix totalt minimal
+    #Questions facultatives
+    HistoriqueCommande = []
 
+    nbCaracteristique = 4
 
     def contact_hot1(self):
         message = ACLMessage(ACLMessage.CFP)
@@ -67,6 +75,7 @@ class Agence(Agent):
         self.QuntD = self.clientMessage["nuit"]
         self.ville =self.clientMessage["ville"]
         self.etoiles = self.clientMessage["etoiles"]
+        self.prix = self.clientMessage['prix']
 
     def refus(self, hotel):
         message = ACLMessage(ACLMessage.REJECT_PROPOSAL)
@@ -86,7 +95,7 @@ class Agence(Agent):
         message.set_content("Vous pouvez considérer la demande du client")
         self.send(message)
     
-    def contact_Client(self):
+    def contact_Client_ChoixHotel(self):
         
         message = ACLMessage(ACLMessage.INFORM)
         message.set_protocol(ACLMessage.FIPA_REQUEST_PROTOCOL)
@@ -99,6 +108,14 @@ class Agence(Agent):
         message.set_content(new_msg)
         self.send(message)
 
+    def contact_Client_Scoring(self, sorted_scoring):
+        message = ACLMessage(ACLMessage.INFORM)
+        message.set_protocol(ACLMessage.FIPA_REQUEST_PROTOCOL)
+        message.set_sender(AID('agence'))
+        message.add_receiver(AID("client"))
+        message.set_ontology("decision")
+        message.set_content(pickle.dumps(sorted_scoring))
+        self.send(message)
 
     def __init__(self, aid):
         super(Agence, self).__init__(aid=aid, debug=False)
@@ -113,68 +130,75 @@ class Agence(Agent):
         super(Agence, self).react(message)
 
         self.countHotel
-        # Contacter les hotels
+        # Contacter les hotels dès qu'on recoit une commande de client
         if message.ontology  == "cmdClient":
             self.saveClientMessage(message.content)
             call_later(3.0, self.contact_hot1)
             call_later(3.0, self.contact_hot2)
             call_later(3.0, self.contact_hot3)
 
-        # Enregistrement de la réponse des hotels
+        # Enregistrement de la réponse des TROIS hotels
         if message.ontology  == "offrePropose" and self.countHotel <= 3:
             self.countHotel += 1
             proposition = pickle.loads(message.content)
             self.LesHotels.append(proposition)
-            print(F"{self.countHotel} hotel enregister")
+            #print(F"{self.countHotel} hotel enregister")
 
-        # Quand on a la réponse des 3 hotels, on choisit le meilleur
+        # Quand on a la réponse des TROIS hotels, on choisit le meilleur ou on propose un classment
         if self.countHotel == 3:
             self.countHotel = 0
-            print("Toutes les réponses sont reçues")
-            self.choixHotel()
+            print(">>> Toutes les réponses sont reçues par l'agence")
+            #print(">>> Voici le meilleur hotel")
+            #self.choixHotel()
+            print(">>> Voici le classement des hotels")
+            classement = self.scoringAndSortingHotel()
+            self.contact_Client_Scoring(classement)
 
-
-    def choixHotel(self):
-        print('Nous allons sélectionner le meilleur')
-        lesHotels = self.LesHotels
-        dictHotels =self.dictHotels
-        nbrPers = self.nbrPers
-        ville = self.ville
-        nuit = self.QuntD
-        etoiles = self.etoiles
-
-        for count, hotel in enumerate(lesHotels): 
-            #Les hotels qui répondent aux attentes du client
-            if hotel["nbrMaxPersAccepte"] >= nbrPers and hotel["ville"] == ville and hotel["nbrEtoilesP"] >= etoiles:
-                # Calcule du prix total
-                prix = nbrPers * hotel["prix"] * nuit
-                if nuit>=3 : 
-                    prix *= 1/hotel["avantage"] 
-                dictHotels[hotel["nameHotel"]] = prix
-            #Les hotels qui ne match pas avec les demandes du client
-            else:
-                #print(hotel["nameHotel"] + 'Vous ne correspondez pas aux attentes du client')
-                self.refus(hotel["nameHotel"])
-                #lesHotels.remove(hotel)
-
-        flag = True
-        for key, val in dictHotels.items():
         
-            if key == min(dictHotels, key=dictHotels.get) and flag:
-                #print(key + "vous êtes le meilleur avec un prix de "+ str(val))
-                self.accept(key)
-                flag = False
-                self.PrixFinal = val
-                self.IdBestHotel = key
-                self.contact_Client()
+    def scoringAndSortingHotel(self):
+        scoring = {}
+        doubleScore = []
+        penalite = 0.1
+
+        for hotel in self.LesHotels:
+            scoring[hotel['nameHotel']]= self.score(hotel)
+        
+        counting = Counter(scoring.values())
+        for key, val in counting.items():
+            if val != 1:
+                doubleScore.append(key)
+
+        for key, val in scoring.items():
+            if val in doubleScore:
+                for hotel in self.LesHotels:
+                    if hotel['nameHotel'] == key:
+                        scoring[key] =  val - self.calculPrix(hotel)*penalite
+
+        sorted_scoring = dict(sorted(scoring.items(), key=lambda item: item[1], reverse = True))  
+        
+        return sorted_scoring
 
 
 
-            else:
-                #print(key + "vous n'etes pas le meilleur car votre prix est de "+ str(val))
-                self.refus(key)
+    def score(self, hotel) -> float :
+        return (100/self.nbCaracteristique) * self.critereSatisfait(hotel)
 
+    def critereSatisfait(self, hotel) -> int:
+        nbr_critereSatisfaits = 0
 
+        if hotel["nbrMaxPersAccepte"] >= self.nbrPers: nbr_critereSatisfaits+=1
+        if hotel['ville'] == self.ville: nbr_critereSatisfaits+=1
+        if hotel["nbrEtoilesP"] >= self.etoiles: nbr_critereSatisfaits+=1
+        if self.calculPrix(hotel) <= self.prix : nbr_critereSatisfaits+=1
+
+        return nbr_critereSatisfaits
+
+    def calculPrix(self, hotel) -> int:
+        prix =  hotel["prix"] * self.QuntD
+        if self.QuntD >= 3 : 
+            prix *= (100 - hotel["avantage"]) * 0.01
+
+        return prix
 
 
              
