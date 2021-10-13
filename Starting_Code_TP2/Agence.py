@@ -200,6 +200,45 @@ class Agence(Agent):
 
         return prix
 
+       def choixHotel(self):
+        print('Nous allons sélectionner le meilleur')
+        lesHotels = self.LesHotels
+        dictHotels =self.dictHotels
+        nbrPers = self.nbrPers
+        ville = self.ville
+        nuit = self.QuntD
+        etoiles = self.etoiles
+
+        for count, hotel in enumerate(lesHotels): 
+            #Les hotels qui répondent aux attentes du client
+            if hotel["nbrMaxPersAccepte"] >= nbrPers and hotel["ville"] == ville and hotel["nbrEtoilesP"] >= etoiles:
+                # Calcule du prix total
+                prix = nbrPers * hotel["prix"] * nuit
+                if nuit>=3 : 
+                    prix *= 1/hotel["avantage"] 
+                dictHotels[hotel["nameHotel"]] = prix
+            #Les hotels qui ne match pas avec les demandes du client
+            else:
+                #print(hotel["nameHotel"] + 'Vous ne correspondez pas aux attentes du client')
+                self.refus(hotel["nameHotel"])
+                #lesHotels.remove(hotel)
+
+        flag = True
+        for key, val in dictHotels.items():
+
+            if key == min(dictHotels, key=dictHotels.get) and flag:
+                #print(key + "vous êtes le meilleur avec un prix de "+ str(val))
+                self.accept(key)
+                flag = False
+                self.PrixFinal = val
+                self.IdBestHotel = key
+                self.contact_Client()
+
+
+
+            else:
+                #print(key + "vous n'etes pas le meilleur car votre prix est de "+ str(val))
+                self.refus(key)
 
              
 
